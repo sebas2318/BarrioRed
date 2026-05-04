@@ -23,6 +23,44 @@
 
     <script src="auth.js"></script>
     <script>
+        function activarRealtime(categoriaPro) {
+    _supabase
+        .channel('cambios-solicitudes') 
+        .on(
+            'postgres_changes', 
+            { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'solicitudes',
+                filter: `categoria=eq.${categoriaPro}`
+            }, 
+            (payload) => {
+                console.log('¡Nueva solicitud recibida!', payload.new);
+                
+                renderizarNuevaSolicitud(payload.new);
+                
+                reproducirSonido();
+            }
+        )
+        .subscribe();
+}
+
+function renderizarNuevaSolicitud(sol) {
+    const lista = document.getElementById('services-grid'); 
+    const nuevaCard = document.createElement('div');
+    nuevaCard.className = 'service-card nueva-notificacion'; 
+    
+    nuevaCard.innerHTML = `
+        <div style="background: #ffecb3; padding: 5px; border-radius: 5px; font-size: 0.8rem; margin-bottom: 10px;">¡NUEVO!</div>
+        <h4>${sol.descripcion}</h4>
+        <p><strong>📍 Ubicación:</strong> ${sol.direccion}</p>
+        <button class="btn-main" onclick="contactarCliente('${sol.telefono_cliente}')">
+            Contactar por WhatsApp
+        </button>
+    `;
+    
+    lista.prepend(nuevaCard);
+}
         document.addEventListener('DOMContentLoaded', async () => {
             const { data: { user } } = await _supabase.auth.getUser();
             if (!user) { window.location.href = 'login-register.html'; return; }
