@@ -51,7 +51,6 @@
 
     <script src="auth.js"></script>
     <script>
-        // 1. Manejo del Formulario
         document.getElementById('pro-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-postular');
@@ -71,7 +70,6 @@
             const categoriaSeleccionada = document.getElementById('p-categoria').value;
 
             try {
-                // Insertar en postulaciones
                 const { error: errorPostulacion } = await _supabase.from('postulaciones').insert([{
                     user_id: user.id,
                     categoria: categoriaSeleccionada,
@@ -82,7 +80,6 @@
 
                 if (errorPostulacion) throw errorPostulacion;
 
-                // Actualizar perfil público con el DNI
                 const { error: errorPerfil } = await _supabase
                     .from('profiles')
                     .update({ id_publico: dniOficial }) 
@@ -90,8 +87,8 @@
 
                 if (errorPerfil) throw errorPerfil;
 
-                alert("¡Postulación exitosa! Ahora eres parte de BarrioRed. Revisa el Panel Pro para ver trabajos.");
-                window.location.href = 'dashboard-pro.html'; // Te mandamos directo al panel
+                alert("¡Postulación exitosa! Revisaremos tu experiencia.");
+                window.location.href = 'index.html'; 
 
             } catch (error) {
                 console.error(error);
@@ -102,7 +99,6 @@
             }
         });
 
-        // 2. Gestión de Sesión (Header)
         async function revisarSesion() {
             const { data: { user } } = await _supabase.auth.getUser();
             if (user) {
