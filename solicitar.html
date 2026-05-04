@@ -173,7 +173,6 @@
 
                         const { error: insertError } = await _supabase
                             .from('solicitudes')
-                            .select() // Opcional
                             .insert([nuevaSolicitud]);
 
                         if (insertError) throw insertError;
