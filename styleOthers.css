@@ -16,6 +16,17 @@ body {
     line-height: 1.6;
 }
 
+nueva-notificacion {
+    animation: aparecerYBrillar 1.5s ease-out;
+    border: 2px solid #ffc107 !important;
+}
+
+@keyframes aparecerYBrillar {
+    0% { transform: translateY(-20px); opacity: 0; background-color: #fff9c4; }
+    50% { background-color: #fff9c4; }
+    100% { transform: translateY(0); opacity: 1; background-color: white; }
+}
+
 header {
     display: flex;
     justify-content: space-between;
