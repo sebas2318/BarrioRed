@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BarrioRed - Admin Panel</title>
+    <link rel="stylesheet" href="styleOthers.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <header>
+        <div class="logo">🏠 BarrioRed Admin</div>
+    </header>
+
+    <main class="container-page">
+        <h2>Panel de Verificación de Profesionales</h2>
+        <p>Revisa las solicitudes de los vecinos que quieren trabajar en la plataforma.</p>
+        
+        <div style="overflow-x: auto; margin-top: 20px;">
+            <table id="tabla-admin" style="width: 100%; border-collapse: collapse; background: white;">
+                <thead>
+                    <tr style="background: #2b4c8c; color: white;">
+                        <th style="padding: 12px;">Nombre</th>
+                        <th style="padding: 12px;">Categoría</th>
+                        <th style="padding: 12px;">Cédula/ID</th>
+                        <th style="padding: 12px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="lista-postulaciones">
+                    <!-- Los datos cargarán aquí -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script src="auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', cargarPostulaciones);
+
+        async function cargarPostulaciones() {
+    
+            const { data: postulaciones, error } = await _supabase
+                .from('postulaciones') 
+                .select('*')
+                .eq('estado', 'pendiente');
+
+            if (error) {
+                console.error("Error al obtener datos:", error);
+                return;
+            }
+
+            const tbody = document.getElementById('lista-postulaciones');
+            tbody.innerHTML = '';
+
+            for (const p of postulaciones) {
+                const { data: perfil } = await _supabase
+                    .from('profiles') 
+                    .select('full_name') 
+                    .eq('id', p.user_id)
+                    .single();
+
+                const nombreMostrar = (perfil && perfil.full_name) ? perfil.full_name : "Sin nombre";
+
+                tbody.innerHTML += `
+                    <tr style="border-bottom: 1px solid #ddd; text-align: center;">
+                        <td style="padding: 10px;">${nombreMostrar}</td> 
+                        <td style="padding: 10px;">${p.categoria}</td>
+                        <td style="padding: 10px;">${p.identificacion}</td> 
+                        <td style="padding: 10px;">
+                            <button onclick="aprobarPro('${p.user_id}')" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Aprobar</button>
+                            <button onclick="rechazarPro('${p.user_id}')" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Rechazar</button>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        async function aprobarPro(userId) {
+            const { error } = await _supabase
+                .from('postulaciones')
+                .update({ estado: 'Verificado' }) 
+                .eq('user_id', userId);
+
+            if (!error) {
+                alert("¡Profesional verificado con éxito!");
+                cargarPostulaciones();
+            } else {
+                console.error("Error al aprobar:", error);
+            }
+        }
+
+        async function rechazarPro(userId) {
+            if(confirm("¿Estás seguro de rechazar esta solicitud?")) {
+                const { error } = await _supabase
+                    .from('postulaciones')
+                    .delete()
+                    .eq('user_id', userId);
+
+                if (!error) {
+                    alert("Solicitud eliminada.");
+                    cargarPostulaciones();
+                } else {
+                    console.error("Error al rechazar:", error);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
