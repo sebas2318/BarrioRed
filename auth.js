@@ -2,7 +2,6 @@ const supabaseUrl = 'https://yrbqknvqnxylygzvodyf.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyYnFrbnZxbnh5bHlnenZvZHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3NTkzMjEsImV4cCI6MjA5MzMzNTMyMX0.dU2EVS6soB4YN4naRn-_9W318irTaVzLCUMzowEjW_Y';
 const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-// 2. FUNCIÓN DE REGISTRO
 async function registrarUsuario(e) {
     e.preventDefault();
     const name = document.getElementById('reg-name').value;
@@ -37,14 +36,26 @@ async function iniciarSesion(e) {
     }
 
     try {
+        // A. Autenticación en Supabase Auth
         const { data: authData, error: authError } = await _supabase.auth.signInWithPassword({
             email: email,
             password: password,
         });
 
         if (authError) throw authError;
-
         const user = authData.user;
+
+        const { data: profile, error: profileError } = await _supabase
+            .from('profiles')
+            .select('admin')
+            .eq('id', user.id)
+            .single();
+
+        if (profile && profile.admin === true) {
+            console.log("Acceso concedido al Panel Admin");
+            window.location.replace('dashboardAdmin.html');
+            return; 
+        }
 
         const { data: pro, error: proError } = await _supabase
             .from('postulaciones')
@@ -53,7 +64,7 @@ async function iniciarSesion(e) {
             .maybeSingle();
 
         if (pro && pro.estado && pro.estado.toLowerCase() === "verificado") {
-            console.log("Acceso concedido al Panel Pro");
+            console.log("Acceso concedido al Dashboard Pro");
             window.location.replace('profesional.html');
         } else {
             console.log("Acceso como vecino normal");
