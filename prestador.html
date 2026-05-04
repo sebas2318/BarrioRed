@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>BarrioRed - Postularse</title>
+    <link rel="stylesheet" href="styleOthers.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <header>
+        <div class="logo">🏠 BarrioRed</div>
+        <input type="checkbox" id="menu" style="display:none;">
+        <nav>
+            <ul class="menu-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li id="auth-container">
+                    <a href="login-register.html" class="btn-login">Iniciar Sesión</a>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container-page">
+        <div style="background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); max-width: 500px; margin: 40px auto;">
+            <h2 style="text-align: center; color: #2b4c8c;">¡Únete como Profesional!</h2>
+            <p style="text-align: center; color: #666; margin-bottom: 30px;">Completa tus datos para empezar a recibir solicitudes en tu barrio.</p>
+            
+            <form id="pro-form">
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">¿Qué servicio ofreces?</label>
+                <select id="p-categoria" required style="width: 100%; padding: 10px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #ccc;">
+                    <option value="reparaciones">Reparaciones (Plomería, Electricidad, etc.)</option>
+                    <option value="mascotas">Mascotas (Paseos, Baño, etc.)</option>
+                    <option value="mandados">Mandados y Compras</option>
+                </select>
+
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Identificación</label>
+                <input type="text" id="p-identificacion" placeholder="Número de DNI" required style="width: 100%; padding: 10px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #ccc;">
+                
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Contacto</label>
+                <input type="text" id="p-telefono" placeholder="WhatsApp (Ej: 3164435684)" required style="width: 100%; padding: 10px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #ccc;">
+                
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Tu experiencia</label>
+                <textarea id="p-exp" placeholder="Cuéntanos brevemente tu experiencia..." style="width: 100%; padding: 10px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #ccc; height: 100px; font-family: inherit;"></textarea>
+                
+                <button type="submit" class="btn-main" id="btn-postular" style="width: 100%; padding: 12px; background: #2b4c8c; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                    Enviar Postulación
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <script src="auth.js"></script>
+    <script>
+        // 1. Manejo del Formulario
+        document.getElementById('pro-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-postular');
+            btn.innerText = "Procesando...";
+            btn.disabled = true;
+
+            const { data: { user } } = await _supabase.auth.getUser();
+            
+            if (!user) {
+                alert("Debes iniciar sesión para postularte.");
+                btn.disabled = false;
+                btn.innerText = "Enviar Postulación";
+                return;
+            }
+
+            const dniOficial = document.getElementById('p-identificacion').value;
+            const categoriaSeleccionada = document.getElementById('p-categoria').value;
+
+            try {
+                // Insertar en postulaciones
+                const { error: errorPostulacion } = await _supabase.from('postulaciones').insert([{
+                    user_id: user.id,
+                    categoria: categoriaSeleccionada,
+                    identificacion: dniOficial,
+                    whatsapp: document.getElementById('p-telefono').value,
+                    experiencia: document.getElementById('p-exp').value
+                }]);
+
+                if (errorPostulacion) throw errorPostulacion;
+
+                // Actualizar perfil público con el DNI
+                const { error: errorPerfil } = await _supabase
+                    .from('profiles')
+                    .update({ id_publico: dniOficial }) 
+                    .eq('id', user.id);
+
+                if (errorPerfil) throw errorPerfil;
+
+                alert("¡Postulación exitosa! Ahora eres parte de BarrioRed. Revisa el Panel Pro para ver trabajos.");
+                window.location.href = 'dashboard-pro.html'; // Te mandamos directo al panel
+
+            } catch (error) {
+                console.error(error);
+                alert("Hubo un error: " + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Enviar Postulación";
+            }
+        });
+
+        // 2. Gestión de Sesión (Header)
+        async function revisarSesion() {
+            const { data: { user } } = await _supabase.auth.getUser();
+            if (user) {
+                const container = document.getElementById('auth-container');
+                const nombre = user.user_metadata.full_name || "Vecino";
+                container.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-weight: 600; color: #2b4c8c;">Hola, ${nombre}</span>
+                        <div style="width: 35px; height: 35px; background: #2b4c8c; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">
+                            ${nombre.charAt(0).toUpperCase()}
+                        </div>
+                        <button onclick="salir()" style="border: none; background: none; color: #666; cursor: pointer; font-size: 0.8rem;">Cerrar sesión</button>
+                    </div>
+                `;
+            }
+        }
+
+        async function salir() {
+            await _supabase.auth.signOut();
+            window.location.reload();
+        }
+
+        document.addEventListener('DOMContentLoaded', revisarSesion);
+    </script>
+</body>
+</html>

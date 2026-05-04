@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>BarrioRed - Panel Profesional</title>
+    <link rel="stylesheet" href="styleOthers.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body style="background: #f4f7f6;">
+    <header>
+        <div class="logo">🏠 BarrioRed Pro</div>
+        <div id="auth-container"></div>
+    </header>
+
+    <main class="container-page" style="max-width: 800px; margin: auto; padding: 20px;">
+        <h2 style="color: #2b4c8c;">Solicitudes Disponibles</h2>
+        <p id="categoria-trabajador" style="font-weight: bold; color: #666;"></p>
+        <hr>
+        <div id="lista-trabajos" style="margin-top: 20px;">
+            <p>Buscando servicios para ti...</p>
+        </div>
+    </main>
+
+    <script src="auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { user } } = await _supabase.auth.getUser();
+            if (!user) { window.location.href = 'login-register.html'; return; }
+            
+            revisarSesion(user);
+
+            const { data: pro } = await _supabase
+                .from('postulaciones')
+                .select('categoria')
+                .eq('user_id', user.id)
+                .single();
+
+            if (!pro) {
+                document.getElementById('lista-trabajos').innerHTML = "No estás registrado como profesional o aún no has sido verificado.";
+                return;
+            }
+
+            document.getElementById('categoria-trabajador').innerText = `Especialidad: ${pro.categoria.toUpperCase()}`;
+
+            const { data: trabajos, error } = await _supabase
+                .from('solicitudes')
+                .select('*')
+                .ilike('categoria', pro.categoria) 
+                .eq('estado', 'pendiente');
+
+            const contenedor = document.getElementById('lista-trabajos');
+            contenedor.innerHTML = "";
+
+            if (trabajos.length === 0) {
+                contenedor.innerHTML = "<p>No hay trabajos pendientes en tu área. ¡Buen trabajo!</p>";
+                return;
+            }
+
+            trabajos.forEach(t => {
+                const card = document.createElement('div');
+                card.style = "background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #2b4c8c;";
+                
+                const mensajeWa = encodeURIComponent(`Hola! Soy profesional de BarrioRed. Vi tu solicitud de ${t.categoria}: "${t.descripcion}". ¿Cuándo puedo ir?`);
+                const waUrl = `https://wa.me/${t.telefono_cliente}?text=${mensajeWa}`;
+
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div>
+                            <p style="margin: 0; font-size: 0.8rem; color: #888;">${new Date(t.creado_el).toLocaleString()}</p>
+                            <h3 style="margin: 5px 0;">${t.descripcion}</h3>
+                            <p>📍 <strong>Dirección:</strong> ${t.direccion}</p>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; display: flex; gap: 10px;">
+                        <a href="${waUrl}" target="_blank" style="background: #25d366; color: white; text-decoration: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; font-size: 0.9rem;">
+                            📞 Contactar por WhatsApp
+                        </a>
+                        <button onclick="completar('${t.id}')" style="background: #2b4c8c; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 0.9rem; font-weight: bold;">
+                        Marcar como Realizado
+                        </button>
+                    </div>
+                `;
+                contenedor.appendChild(card);
+            });
+        });
+
+        function revisarSesion(user) {
+            const container = document.getElementById('auth-container');
+            const nombre = user.user_metadata.full_name || "Profesional";
+
+            container.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px; padding: 10px;">
+                    <span style="font-weight: 600; color: #2b4c8c;">Hola, ${nombre}</span>
+                    <div style="width: 35px; height: 35px; background: #2b4c8c; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">
+                        ${nombre.charAt(0).toUpperCase()}
+                    </div>
+                    <button onclick="salir()" style="border: none; background: none; color: #666; cursor: pointer; font-size: 0.8rem;">Cerrar sesión</button>
+                </div>
+            `;
+        }
+
+        async function salir() {
+            await _supabase.auth.signOut();
+            window.location.reload();
+        }
+
+        async function completar(id) {
+    if (!confirm("¿Estás seguro de marcar este trabajo como realizado?")) return;
+
+    console.log("Intentando completar solicitud con ID:", id);
+
+    const { data, error } = await _supabase
+        .from('solicitudes')
+        .update({ estado: 'completado' }) 
+        .eq('id', id)
+        .select();
+    if (error) {
+        console.error("Error al actualizar estado:", error);
+        alert("No se pudo actualizar: " + error.message);
+    } else {
+        console.log("Solicitud actualizada correctamente:", data);
+        alert("✅ Trabajo completado con éxito.");
+        location.reload();
+    }
+}
+    </script>
+</body>
+</html>

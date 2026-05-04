@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BarrioRed - Inicio</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <header>
+        <div class="logo">🏠 BarrioRed</div>
+        <input type="checkbox" id="menu">
+        <label for="menu" class="menu-icon"><i class="bi bi-list" for="menu"></i></label>
+        <nav>
+            <ul class="menu-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="services.html">Servicios</a></li>
+                <li><a href="verification.html">Verificación</a></li>
+                <li><a href="contacto.html">Contacto</a></li>
+                <li id="auth-container">
+                    <a href="login-register.html" class="btn-login">Iniciar Sesión</a>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Todo lo que tu hogar necesita, a la vuelta de un clic.</h1>
+            <p>Conecta con expertos confiables en tu barrio. Verificados, calificados y cerca de ti.</p>
+            <div class="hero-btns">
+                <a href="solicitar.html" class="btn-main">SOLICITAR SERVICIO AHORA →</a>
+                <a href="prestador.html" class="btn-link">Quiero ofrecer mis servicios</a>
+            </div>
+        </div>
+    </section>
+
+    <div class="trust-bar">
+        <div class="trust-item"><span>✔</span> 500+ SERVICIOS REALIZADOS</div>
+        <div class="trust-item">⭐ 4.8 CALIFICACIÓN PROMEDIO</div>
+        <div class="trust-item">🛡 VECINOS 100% VERIFICADOS</div>
+    </div>
+
+    <section class="services">
+        <h2>NUESTROS SERVICIOS PRINCIPALES</h2>
+        <div id="services-grid" class="services-grid">
+        </div>
+    </section>
+
+    <a href="#" class="whatsapp-float">
+        <span><img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/WhatsApp_icon.png" alt="WhatsApp"></span>
+    </a>
+    <script src="auth.js"></script>
+    <script>
+    async function revisarSesion() {
+    const { data: { user } } = await _supabase.auth.getUser();
+
+    if (user) {
+        const container = document.getElementById('auth-container');
+        const nombre = user.user_metadata.full_name || "Vecino";
+
+        container.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-weight: 600; color: #2b4c8c;">Hola, ${nombre}</span>
+                <div style="width: 35px; height: 35px; background: #2b4c8c; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">
+                    ${nombre.charAt(0).toUpperCase()}
+                </div>
+                <button onclick="salir()" style="border: none; background: none; color: #666; cursor: pointer; font-size: 0.8rem;">Cerrar sesión</button>
+            </div>
+        `;
+    }
+}
+
+async function salir() {
+    await _supabase.auth.signOut();
+    window.location.reload();
+}
+
+document.addEventListener('DOMContentLoaded', revisarSesion);
+
+async function cargarServicios() {
+    console.log("Intentando cargar servicios...");
+    
+    const { data, error } = await _supabase
+        .from('categorias')
+        .select(`
+            nombre,
+            icono,
+            servicios (
+                nombre
+            )
+        `);
+
+    if (error) {
+        console.error("Error de Supabase:", error.message);
+        return;
+    }
+
+    if (!data || data.length === 0) {
+        console.warn("No hay datos en la tabla 'categorias'.");
+        return;
+    }
+
+    const grid = document.getElementById('services-grid');
+    if (!grid) {
+        console.error("No se encontró el elemento con id 'services-grid'");
+        return;
+    }
+
+    grid.innerHTML = ''; 
+
+    data.forEach(cat => {
+        const card = document.createElement('div');
+        card.className = 'service-card';
+        card.innerHTML = `
+            <div class="service-icon">${cat.icono || '📌'}</div>
+            <div class="service-info">
+                <h3>${cat.nombre}</h3>
+                <ul>
+                    ${cat.servicios.map(s => `<li>${s.nombre}</li>`).join('')}
+                </ul>
+                <a href="services.html">Ver más</a>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+    console.log("Servicios cargados con éxito:", data);
+}
+document.addEventListener('DOMContentLoaded', () => {
+    revisarSesion();  
+    cargarServicios();
+});
+
+async function crearSolicitudRapida() {
+    const { data: { user } } = await _supabase.auth.getUser();
+
+    if (!user) {
+        alert("Debes iniciar sesión para solicitar un servicio.");
+        window.location.href = 'login-register.html';
+        return;
+    }
+
+    const { error } = await _supabase
+        .from('solicitudes')
+        .insert([
+            { cliente_id: user.id, estado: 'interesado' }
+        ]);
+
+    if (!error) {
+        alert("¡Excelente! Un experto de tu barrio se pondrá en contacto contigo.");
+    }
+}
+    </script>
+</body>
+</html>

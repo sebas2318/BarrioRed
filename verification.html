@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Verificación - BarrioRed</title>
+    <link rel="stylesheet" href="styleOthers.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <header>
+        <div class="logo">🏠 BarrioRed</div>
+        <nav>
+            <ul class="menu-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li id="auth-container">
+                    <a href="login-register.html" class="btn-login">Iniciar Sesión</a>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container-page" style="text-align: center;">
+        <img src="https://cdn-icons-png.flaticon.com/512/7595/7595571.png" width="80" alt="Escudo de Seguridad">
+        <h2>Verificar Profesional</h2>
+        <p>Ingresa el <strong>DNI</strong> del trabajador para confirmar su identidad.</p>
+        
+        <div style="max-width: 400px; margin: 30px auto;">
+            <input type="text" id="worker-id" placeholder="Ej: 1080292507" style="width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ccc;">
+            <button onclick="verificar()" class="btn-main" id="btn-verificar">Consultar Estatus</button>
+        </div>
+
+        <div id="result" style="display:none; max-width: 450px; margin: 20px auto; padding: 25px; border-radius: 15px; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>
+    </main>
+
+    <script src="auth.js"></script>
+    <script>
+        async function verificar() {
+        const dniIngresado = document.getElementById('worker-id').value.trim();
+        const resDiv = document.getElementById('result');
+        const btn = document.getElementById('btn-verificar');
+
+        if (!dniIngresado) {
+            alert("Por favor, ingresa un número de DNI.");
+            return;
+        }
+
+        btn.innerText = "Buscando...";
+        btn.disabled = true;
+        resDiv.style.display = 'none';
+
+        try {
+            const { data, error } = await _supabase
+                .from('profiles')
+                .select('full_name, verificado, id_publico')
+                .eq('id_publico', dniIngresado)
+                .single();
+
+            resDiv.style.display = 'block';
+
+            if (error || !data) {
+                resDiv.innerHTML = `
+                    <h3 style="color: #e74c3c;">❌ No encontrado</h3>
+                    <p>El DNI <strong>${dniIngresado}</strong> no está registrado como profesional verificado en BarrioRed.</p>
+                `;
+            } else {
+                if (data.verificado === true) {
+                    resDiv.style.borderTop = "5px solid #2ecc71";
+                    resDiv.innerHTML = `
+                        <h3 style="color: #27ae60;">✅ Profesional Verificado</h3>
+                        <p><strong>Nombre:</strong> ${data.full_name}</p>
+                        <p><strong>DNI:</strong> ${data.id_publico}</p>
+                        <p style="margin-top:10px; font-size: 0.9rem; color: #666;">Este trabajador ha cumplido con los requisitos de seguridad de BarrioRed.</p>
+                    `;
+                } else {
+                    resDiv.style.borderTop = "5px solid #f1c40f";
+                    resDiv.innerHTML = `
+                        <h3 style="color: #f39c12;">⚠️ En proceso</h3>
+                        <p><strong>Nombre:</strong> ${data.full_name}</p>
+                        <p>El profesional está registrado, pero su identidad aún está en proceso de validación por nuestro equipo.</p>
+                    `;
+                }
+            }
+        } catch (err) {
+            console.error("Error en consulta:", err);
+            alert("Hubo un error al conectar con la base de datos.");
+        } finally {
+            btn.innerText = "Consultar Estatus";
+            btn.disabled = false;
+        }
+    }
+
+    async function revisarSesion() {
+        const { data: { user } } = await _supabase.auth.getUser();
+
+        if (user) {
+            const container = document.getElementById('auth-container');
+            const nombre = user.user_metadata.full_name || "Vecino";
+
+            container.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-weight: 600; color: #2b4c8c;">Hola, ${nombre}</span>
+                    <div style="width: 35px; height: 35px; background: #2b4c8c; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">
+                        ${nombre.charAt(0).toUpperCase()}
+                    </div>
+                    <button onclick="salir()" style="border: none; background: none; color: #666; cursor: pointer; font-size: 0.8rem;">Cerrar sesión</button>
+                </div>
+            `;
+        }
+    }
+
+    async function salir() {
+        await _supabase.auth.signOut();
+        window.location.reload();
+    }
+
+    document.addEventListener('DOMContentLoaded', revisarSesion);
+</script>
+    </script>
+</body>
+</html>
