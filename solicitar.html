@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BarrioRed - Solicitar Servicio</title>
     <link rel="stylesheet" href="styleOthers.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -49,158 +50,150 @@
 
     <script src="auth.js"></script> 
     <script>
-    let nombreServicioSeleccionado = "";
-    let categoriaDelServicioActual = "";
-    let estadoActual = "pendiente"; 
-        //falta poder enviar la solicitud de cualquier servicio desde solicitar.html o services.html
-        async function crearTicket(tipo) {
-    if (typeof _supabase === 'undefined') {
-        console.error("Error: La variable _supabase no está definida. Revisa auth.js");
-        return;
-    }
 
-    const { data: { user } } = await _supabase.auth.getUser();
-    
-    const placeholdersEjemplos = {
-        "Plomería": "Ej: El grifo de la cocina gotea y hay una mancha en la pared...",
-        "Electricidad": "Ej: Se bajó el taco de la cocina y no sube, huele a quemado...",
-        "Paseos": "Ej: Paseo para un Golden Retriever de 2 años, 1 hora en el parque...",
-        "Mascotas": "Ej: Necesito baño y corte de pelo para mi perrito...",
-        "default": "Describe detalladamente lo que necesitas..."
-    };
+        let categoriaDelServicioActual = "";
+        let estadoActual = "pendiente"; 
 
-    // CORRECCIÓN: Se agrega categoriaPadre a los argumentos
-    function abrirFormulario(id, nombre, categoriaPadre) {
-        nombreServicioSeleccionado = nombre;
-        categoriaDelServicioActual = categoriaPadre; 
-        
-        document.getElementById('modal-solicitud').style.display = 'block';
-        document.getElementById('input-servicio-id').value = id;
-        document.getElementById('modal-titulo').innerText = `Solicitar ${nombre}`;
-        
-        const txtArea = document.getElementById('input-descripcion');
-        txtArea.placeholder = placeholdersEjemplos[nombre] || placeholdersEjemplos["default"];
-        
-        console.log("Servicio:", nombre, "| Categoría para Dashboard:", categoriaPadre);
-    }
+        const placeholdersEjemplos = {
+            "Plomería": "Ej: El grifo de la cocina gotea y hay una mancha en la pared...",
+            "Electricidad": "Ej: Se bajó el taco de la cocina y no sube, huele a quemado...",
+            "Paseos": "Ej: Paseo para un Golden Retriever de 2 años, 1 hora en el parque...",
+            "Mascotas": "Ej: Necesito baño y corte de pelo para mi perrito...",
+            "default": "Describe detalladamente lo que necesitas..."
+        };
 
-    function cerrarModal() {
-        document.getElementById('modal-solicitud').style.display = 'none';
-        document.getElementById('form-barriored').reset();
-        nombreServicioSeleccionado = "";
-        categoriaDelServicioActual = "";
-    }
-
-    document.addEventListener('DOMContentLoaded', async () => {
-        if (typeof _supabase === 'undefined') {
-            console.error("Error: _supabase no está definido.");
-            return;
+        function abrirFormulario(id, nombre, categoriaPadre) {
+            categoriaDelServicioActual = categoriaPadre; 
+            
+            document.getElementById('modal-solicitud').style.display = 'block';
+            document.getElementById('input-servicio-id').value = id;
+            document.getElementById('modal-titulo').innerText = `Solicitar ${nombre}`;
+            
+            const txtArea = document.getElementById('input-descripcion');
+            txtArea.placeholder = placeholdersEjemplos[nombre] || placeholdersEjemplos["default"];
+            
+            console.log("Servicio:", nombre, "| Categoría:", categoriaPadre);
         }
 
-        const servicesGrid = document.getElementById('services-grid');
+        function cerrarModal() {
+            document.getElementById('modal-solicitud').style.display = 'none';
+            document.getElementById('form-barriored').reset();
+            categoriaDelServicioActual = "";
+        }
 
-        async function cargarServicios() {
-            try {
-                const { data: servicios, error } = await _supabase
-                    .from('servicios')
-                    .select('*');
+        async function salir() {
+            await _supabase.auth.signOut();
+            window.location.reload();
+        }
 
-                if (error) throw error;
+        async function revisarSesion() {
+            if (typeof _supabase === 'undefined') return;
 
-                servicesGrid.innerHTML = ''; 
+            const { data: { user } } = await _supabase.auth.getUser();
+            if (user) {
+                const container = document.getElementById('auth-container');
+                const nombre = user.user_metadata.full_name || "Vecino";
 
-                servicios.forEach(servicio => {
-                    const card = document.createElement('div');
-                    card.className = 'service-card';
-                    
-                    // Pasar los 3 argumentos correctamente
-                    card.onclick = () => abrirFormulario(servicio.id, servicio.nombre, servicio.categoria_padre);
-
-                    card.innerHTML = `
-                        <div style="font-size: 3rem;">${servicio.icono || '🛠️'}</div>
-                        <h3>${servicio.nombre}</h3>
-                    `;
-                    servicesGrid.appendChild(card);
-                });
-            } catch (err) {
-                console.error("Error cargando servicios:", err);
-                servicesGrid.innerHTML = '<p>Error al cargar servicios.</p>';
+                container.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-weight: 600; color: #2b4c8c;">Hola, ${nombre}</span>
+                        <div style="width: 35px; height: 35px; background: #2b4c8c; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">
+                            ${nombre.charAt(0).toUpperCase()}
+                        </div>
+                        <button onclick="salir()" style="border: none; background: none; color: #666; cursor: pointer; font-size: 0.8rem;">Cerrar sesión</button>
+                    </div>
+                `;
             }
         }
 
-        const formulario = document.getElementById('form-barriored');
-        if (formulario) {
-            formulario.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                const btn = document.getElementById('btn-enviar-solicitud');
-                btn.disabled = true;
-                btn.innerText = "Procesando...";
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (typeof _supabase === 'undefined') {
+                console.error("Error: _supabase no está definido. Revisa tu auth.js");
+                return;
+            }
 
+            const servicesGrid = document.getElementById('services-grid');
+
+            async function cargarServicios() {
                 try {
-                    const { data: { user }, error: userError } = await _supabase.auth.getUser();
+                    const { data: servicios, error } = await _supabase
+                        .from('servicios')
+                        .select('*');
 
-                    if (userError || !user) {
-                        alert("🚨 Por favor inicia sesión nuevamente.");
-                        window.location.href = 'login-register.html';
-                        return;
-                    }
+                    if (error) throw error;
 
-                    const nuevaSolicitud = {
-                        cliente_id: user.id,
-                        servicio_id: document.getElementById('input-servicio-id').value,
-                        descripcion: document.getElementById('input-descripcion').value,
-                        direccion: document.getElementById('input-direccion').value,
-                        telefono_cliente: document.getElementById('input-telefono').value,
-                        categoria: categoriaDelServicioActual,
-                        estado: estadoActual
-                    };
+                    servicesGrid.innerHTML = ''; 
 
-                    const { error: insertError } = await _supabase
-                        .from('solicitudes')
-                        .insert([nuevaSolicitud]);
+                    servicios.forEach(servicio => {
+                        const card = document.createElement('div');
+                        card.className = 'service-card';
+                        card.style.cursor = 'pointer';
+                        
+                        card.onclick = () => abrirFormulario(servicio.id, servicio.nombre, servicio.categoria_padre);
 
-                    if (insertError) throw insertError;
-
-                    alert("✅ ¡Solicitud enviada! El profesional te contactará por WhatsApp.");
-                    cerrarModal();
-
+                        card.innerHTML = `
+                            <div style="font-size: 3rem;">${servicio.icono || '🛠️'}</div>
+                            <h3>${servicio.nombre}</h3>
+                        `;
+                        servicesGrid.appendChild(card);
+                    });
                 } catch (err) {
-                    console.error("Error al enviar:", err);
-                    alert("Error: " + err.message);
-                } finally {
-                    btn.disabled = false;
-                    btn.innerText = "Confirmar Pedido";
+                    console.error("Error cargando servicios:", err);
+                    servicesGrid.innerHTML = '<p>Error al cargar servicios.</p>';
                 }
-            });
-        }
+            }
+            
+            const formulario = document.getElementById('form-barriored');
+            if (formulario) {
+                formulario.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    
+                    const btn = document.getElementById('btn-enviar-solicitud');
+                    btn.disabled = true;
+                    btn.innerText = "Procesando...";
 
-        cargarServicios();
-        revisarSesion();
-    });
+                    try {
+                        const { data: { user }, error: userError } = await _supabase.auth.getUser();
 
-    async function revisarSesion() {
-        const { data: { user } } = await _supabase.auth.getUser();
-        if (user) {
-            const container = document.getElementById('auth-container');
-            const nombre = user.user_metadata.full_name || "Vecino";
+                        if (userError || !user) {
+                            alert("🚨 Por favor inicia sesión para solicitar un servicio.");
+                            window.location.href = 'login-register.html';
+                            return;
+                        }
 
-            container.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-weight: 600; color: #2b4c8c;">Hola, ${nombre}</span>
-                    <div style="width: 35px; height: 35px; background: #2b4c8c; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">
-                        ${nombre.charAt(0).toUpperCase()}
-                    </div>
-                    <button onclick="salir()" style="border: none; background: none; color: #666; cursor: pointer; font-size: 0.8rem;">Cerrar sesión</button>
-                </div>
-            `;
-        }
-    }
+                        const nuevaSolicitud = {
+                            cliente_id: user.id,
+                            servicio_id: document.getElementById('input-servicio-id').value,
+                            descripcion: document.getElementById('input-descripcion').value,
+                            direccion: document.getElementById('input-direccion').value,
+                            telefono_cliente: document.getElementById('input-telefono').value,
+                            categoria: categoriaDelServicioActual,
+                            estado: estadoActual
+                        };
 
-    async function salir() {
-        await _supabase.auth.signOut();
-        window.location.reload();
-    }
+                        const { error: insertError } = await _supabase
+                            .from('solicitudes')
+                            .select() // Opcional
+                            .insert([nuevaSolicitud]);
+
+                        if (insertError) throw insertError;
+
+                        alert("✅ ¡Solicitud enviada! El profesional te contactará pronto.");
+                        cerrarModal();
+
+                    } catch (err) {
+                        console.error("Error al enviar:", err);
+                        alert("Error: " + err.message);
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerText = "Confirmar Pedido";
+                    }
+                });
+            }
+
+            cargarServicios();
+            revisarSesion();
+        });
     </script>
 </body>
 </html>
