@@ -115,3 +115,61 @@ input:focus {
 .hidden {
     display: none;
  }
+
+@media (max-width: 768px) {
+    
+    .container-page, main, section {
+        width: 95% !important;
+        margin: 10px auto !important;
+        padding: 15px !important;
+        box-sizing: border-box; 
+    }
+
+    .services-grid, .grid-container, .dashboard-grid {
+        display: grid !important;
+        grid-template-columns: 1fr !important; 
+        gap: 20px !important;
+    }
+
+    header {
+        flex-direction: column;
+        text-align: center;
+        height: auto !important;
+        padding: 20px 0;
+    }
+
+    .menu-links {
+        flex-direction: column;
+        width: 100%;
+        padding: 0;
+        margin-top: 15px;
+    }
+
+    .menu-links li {
+        margin: 10px 0;
+        width: 100%;
+    }
+
+    .btn-main, .btn-login, button, .service-card {
+        width: 100% !important;
+        min-height: 50px;
+        font-size: 1.1rem !important;
+        margin-bottom: 10px;
+    }
+
+    .logo {
+        font-size: 1.5rem;
+        margin-bottom: 10px;
+    }
+
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+
+    #modal-solicitud > div {
+        width: 90% !important;
+        max-width: none !important;
+        margin: 15% auto !important;
+    }
+}
